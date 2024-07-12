@@ -17,8 +17,8 @@ import losses
 import torch.nn.functional as F
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', default='CUB', help='FLO')
-parser.add_argument('--dataroot', default='./data', help='path to dataset')
+parser.add_argument('--dataset', default='ZDFY', help='FLO')
+parser.add_argument('--dataroot', default='/home/LAB/chenlb24/ZhengDaFuyi', help='path to dataset')
 parser.add_argument('--matdataset', default=True, help='Data in matlab format')
 parser.add_argument('--image_embedding', default='res101')
 parser.add_argument('--class_embedding', default='sent',help='att or sent')
@@ -28,9 +28,9 @@ parser.add_argument('--preprocessing', type=bool, default=True, help='enbale Min
 parser.add_argument('--standardization', action='store_true', default=False)
 parser.add_argument('--validation', action='store_true', default=False, help='enable cross validation mode')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
-parser.add_argument('--batch_size', type=int, default=2048, help='input batch size')
+parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
 parser.add_argument('--resSize', type=int, default=2048, help='size of visual features')
-parser.add_argument('--attSize', type=int, default=1024 , help='size of semantic features')
+parser.add_argument('--attSize', type=int, default=768 , help='size of semantic features')
 parser.add_argument('--nz', type=int, default=1024, help='noise for generation')
 parser.add_argument('--embedSize', type=int, default=2048, help='size of embedding h')
 parser.add_argument('--outzSize', type=int, default=512, help='size of non-liner projection z')
@@ -55,8 +55,8 @@ parser.add_argument('--classifier_lr', type=float, default=0.001, help='learning
 parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
 parser.add_argument('--cuda', action='store_true', default=True, help='enables cuda')
 parser.add_argument('--manualSeed', type=int, default=3483, help='manual seed')
-parser.add_argument('--nclass_all', type=int, default=200, help='number of all classes')
-parser.add_argument('--nclass_seen', type=int, default=150, help='number of all classes')
+parser.add_argument('--nclass_all', type=int, default=3, help='number of all classes')
+parser.add_argument('--nclass_seen', type=int, default=2, help='number of all classes')
 
 parser.add_argument('--gpus', default='0', help='the number of the GPU to use')
 opt = parser.parse_args()
