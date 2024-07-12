@@ -1,5 +1,6 @@
 # import h5py
 import json
+import shutil
 import numpy as np
 import scipy.io as sio
 import torch
@@ -204,3 +205,29 @@ def load_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, model_p
     epoch = checkpoint['epoch']
     opt = checkpoint['opt']
     return epoch, opt
+
+def delete_files_in_folder(folder_path):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        print(f"Folder '{folder_path}' was not found and has been created.")
+        return  # 文件夹创建后直接返回
+    else:
+        print("文件夹存在，确定要清空内容吗？（Y/N）")
+        yon = input()
+        if yon == "N":
+            exit()
+    
+    # 遍历指定文件夹
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        try:
+            # 如果是文件，则删除
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.remove(file_path)
+                print(f"Deleted file : {file_path}")
+            # 如果是目录，则删除该目录及其所有内容
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+                print(f"Deleted folder : {file_path}")
+        except Exception as e:
+            print(f'Failed to delete {file_path}. Reason: {e}')

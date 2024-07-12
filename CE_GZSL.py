@@ -90,6 +90,10 @@ F_ha = model.Dis_Embed_Att(opt)
 model_path = './models/' + opt.dataset
 if not os.path.exists(model_path):
     os.makedirs(model_path)
+else:
+    util.delete_files_in_folder(model_path)
+    
+
 
 if len(opt.gpus.split(','))>1:
     netG=nn.DataParallel(netG)
