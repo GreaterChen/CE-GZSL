@@ -79,6 +79,7 @@ if torch.cuda.is_available() and not opt.cuda:
 
 # load data
 data = util.DATA_LOADER(opt)
+print("完成数据读取")
 print("# of training samples: ", data.ntrain)
 
 netG = model.MLP_G(opt)
@@ -114,6 +115,8 @@ if opt.cuda:
     input_label = input_label.cuda()
 
 
+print("完成模型读取")
+
 def sample():
     batch_feature, batch_label, batch_att = data.next_batch(opt.batch_size)
     input_res.copy_(batch_feature)
@@ -122,7 +125,7 @@ def sample():
 
 
 def generate_syn_feature(netG, classes, attribute, num):
-    nclass = classes.size(0)
+    nclass = len(classes)
     syn_feature = torch.FloatTensor(nclass * num, opt.resSize)
     syn_label = torch.LongTensor(nclass * num)
     syn_att = torch.FloatTensor(num, opt.attSize)
