@@ -1,4 +1,5 @@
 # import h5py
+import json
 import numpy as np
 import scipy.io as sio
 import torch
@@ -60,187 +61,55 @@ class Logger(object):
 		f = open(self.filename + '.log', "a")
 		f.write(message)
 		f.close()
-
-
+  
+  
 class DATA_LOADER(object):
 	def __init__(self, opt):
 		if opt.matdataset:
 			if opt.dataset == 'imagenet':
 				self.read_matimagenet(opt)
+			elif opt.dataset == 'ZDFY':
+				self.read_turmor(opt);
 			else:
 				self.read_matdataset(opt)
 		self.index_in_epoch = 0
 		self.epochs_completed = 0
+  
+	def read_turmor(self, opt):
+		self.train_class = [1, 2]
+		self.train_features = np.load(os.path.join(opt.dataroot, 'resnet101', 'train_features.npy')) # (606, 2048)
+		self.train_label = np.load(os.path.join(opt.dataroot, 'resnet101', 'train_targets.npy'))
+  
+		self.test_features = np.load(os.path.join(opt.dataroot, 'resnet101', 'valid_features.npy')) # (171, 2048)
+		self.test_label = np.load(os.path.join(opt.dataroot, 'resnet101', 'valid_targets.npy'))
+		
+		file_path = os.path.join(opt.dataroot, 'att', 'embeddings.json')
+		with open(file_path, 'r') as f:
+			data = json.load(f)
 
-	# not tested
-	def read_h5dataset(self, opt):
-		# read image feature
-		fid = h5py.File(opt.dataroot + "/" + opt.dataset + "/" + opt.image_embedding + ".hdf5", 'r')
-		feature = fid['feature'][()]
-		label = fid['label'][()]
-		trainval_loc = fid['trainval_loc'][()]
-		train_loc = fid['train_loc'][()]
-		val_unseen_loc = fid['val_unseen_loc'][()]
-		test_seen_loc = fid['test_seen_loc'][()]
-		test_unseen_loc = fid['test_unseen_loc'][()]
-		fid.close()
-		# read attributes
-		fid = h5py.File(opt.dataroot + "/" + opt.dataset + "/" + opt.class_embedding + ".hdf5", 'r')
-		self.attribute = fid['attribute'][()]
-		fid.close()
-
-		if not opt.validation:
-			self.train_feature = feature[trainval_loc]
-			self.train_label = label[trainval_loc]
-			self.test_unseen_feature = feature[test_unseen_loc]
-			self.test_unseen_label = label[test_unseen_loc]
-			self.test_seen_feature = feature[test_seen_loc]
-			self.test_seen_label = label[test_seen_loc]
-		else:
-			self.train_feature = feature[train_loc]
-			self.train_label = label[train_loc]
-			self.test_unseen_feature = feature[val_unseen_loc]
-			self.test_unseen_label = label[val_unseen_loc]
-
-		self.seenclasses = np.unique(self.train_label)
-		self.unseenclasses = np.unique(self.test_unseen_label)
-		self.nclasses = self.seenclasses.size(0)
-
-	def read_matimagenet(self, opt):
-		if opt.preprocessing:
-			print('MinMaxScaler...')
-			scaler = preprocessing.MinMaxScaler()
-			matcontent = h5py.File(opt.dataroot + "/ILSVRC_2012" + "/ILSVRC2012_res101_feature.mat", "r")
-			feature = scaler.fit_transform(np.array(matcontent['features'])).T
-			label = np.array(matcontent['labels']).astype(int).squeeze() - 1
-			feature_val = scaler.transform(np.array(matcontent['features_val']))
-			label_val = np.array(matcontent['labels_val']).astype(int).squeeze() - 1
-			matcontent.close()
-			matcontent = h5py.File('/BS/xian/work/data/imageNet21K/extract_res/res101_1crop_2hops_t.mat', 'r')
-			feature_unseen = scaler.transform(np.array(matcontent['features']))
-			label_unseen = np.array(matcontent['labels']).astype(int).squeeze() - 1
-			matcontent.close()
-		else:
-			matcontent = h5py.File(opt.dataroot + "/ILSVRC_2012" + "/ILSVRC2012_res101_feature.mat", "r")
-			feature = np.array(matcontent['features']).T
-			label = np.array(matcontent['labels']).astype(int).squeeze() - 1
-			feature_val = np.array(matcontent['features_val'])
-			label_val = np.array(matcontent['labels_val']).astype(int).squeeze() - 1
-			matcontent.close()
-
-		matcontent = h5py.File(opt.dataroot + "/ImageNet/ImageNet_w2v.mat", "r")
-		self.attribute = torch.from_numpy(matcontent['w2v'][()].T).float()
-
-		matcontent.close()
-
-		# get the data split
-		data_split = sio.loadmat(opt.dataroot + '/imagenet_feature/ImageNet_splits.mat')
-
-		self.hop_2_classes = torch.from_numpy(np.array(data_split['hops2']).astype(int).squeeze() - 1).long()
-		self.hop_3_classes = torch.from_numpy(np.array(data_split['hops3']).astype(int).squeeze() - 1).long()
-		self.all_classes = torch.from_numpy(np.array(data_split['all']).astype(int).squeeze() - 1).long()
-
-		self.hop_2_classes_map = map_label(self.hop_2_classes, self.hop_2_classes) + 1000
-		self.hop_3_classes_map = map_label(self.hop_3_classes, self.hop_3_classes) + 1000
-		self.all_classes_map = map_label(self.all_classes, self.all_classes) + 1000
-
-		# self.most_popular_500=torch.from_numpy(np.array(data_split['mp500']).astype(int).squeeze() - 1).long()
-		# self.most_popular_1000 = torch.from_numpy(np.array(data_split['mp1000']).astype(int).squeeze() - 1).long()
-		# self.most_popular_5000 = torch.from_numpy(np.array(data_split['mp5000']).astype(int).squeeze() - 1).long()
-		#
-		# self.least_popular_500 = torch.from_numpy(np.array(data_split['lp500']).astype(int).squeeze() - 1).long()
-		# self.least_popular_1000 = torch.from_numpy(np.array(data_split['lp1000']).astype(int).squeeze() - 1).long()
-		# self.least_popular_5000 = torch.from_numpy(np.array(data_split['lp5000']).astype(int).squeeze() - 1).long()
-
-		self.train_feature = torch.from_numpy(feature).float()  # 1281167
-		self.train_label = torch.from_numpy(label).long()
-		self.test_seen_feature = torch.from_numpy(feature_val).float()  # 50000
-		self.test_seen_label = torch.from_numpy(label_val).long()
-		self.ntrain = self.train_feature.size()[0]
-		self.seenclasses = torch.from_numpy(np.unique(self.train_label.numpy()))  # 1000
-		self.ntrain_class = self.seenclasses.size(0)
-		# self.ntest_class = self.unseenclasses.size(0)
-
-		self.attribute_seen = self.attribute[self.seenclasses]
-
-		self.unseen_split = {'2-hop': self.hop_2_classes, '3-hop': self.hop_3_classes, 'all': self.all_classes,
-		                     '2-hop_map': self.hop_2_classes_map, '3-hop_map': self.hop_3_classes_map,
-		                     'all_map': self.all_classes_map}
-
-		# release the memory
-		import gc
-		del matcontent, feature, feature_val, label, label_val
-		gc.collect()
-
-	def read_matdataset(self, opt):
-		matcontent = sio.loadmat(opt.dataroot + "/" + opt.dataset + "/" + opt.image_embedding + ".mat")
-		feature = matcontent['features'].T
-		self.all_file = matcontent['image_files']
-		label = matcontent['labels'].astype(int).squeeze() - 1
-		matcontent = sio.loadmat(opt.dataroot + "/" + opt.dataset + "/" + opt.class_embedding + "_splits.mat")
-		# numpy array index starts from 0, matlab starts from 1
-		trainval_loc = matcontent['trainval_loc'].squeeze() - 1
-		train_loc = matcontent['train_loc'].squeeze() - 1
-		val_unseen_loc = matcontent['val_loc'].squeeze() - 1
-		test_seen_loc = matcontent['test_seen_loc'].squeeze() - 1
-		test_unseen_loc = matcontent['test_unseen_loc'].squeeze() - 1
-
-		self.attribute = torch.from_numpy(matcontent['att'].T).float()
-		if not opt.validation:
-			self.train_image_file = self.all_file[trainval_loc]
-			self.test_seen_image_file = self.all_file[test_seen_loc]
-			self.test_unseen_image_file = self.all_file[test_unseen_loc]
-
-			if opt.preprocessing:
-				if opt.standardization:
-					print('standardization...')
-					scaler = preprocessing.StandardScaler()
-				else:
-					scaler = preprocessing.MinMaxScaler()
-
-				_train_feature = scaler.fit_transform(feature[trainval_loc])
-				_test_seen_feature = scaler.transform(feature[test_seen_loc])
-				_test_unseen_feature = scaler.transform(feature[test_unseen_loc])
-				self.train_feature = torch.from_numpy(_train_feature).float()
-				mx = self.train_feature.max()
-				self.train_feature.mul_(1 / mx)
-				self.train_label = torch.from_numpy(label[trainval_loc]).long()
-				self.test_unseen_feature = torch.from_numpy(_test_unseen_feature).float()
-				self.test_unseen_feature.mul_(1 / mx)
-				self.test_unseen_label = torch.from_numpy(label[test_unseen_loc]).long()
-				self.test_seen_feature = torch.from_numpy(_test_seen_feature).float()
-				self.test_seen_feature.mul_(1 / mx)
-				self.test_seen_label = torch.from_numpy(label[test_seen_loc]).long()
-			else:
-				self.train_feature = torch.from_numpy(feature[trainval_loc]).float()
-				self.train_label = torch.from_numpy(label[trainval_loc]).long()
-				self.test_unseen_feature = torch.from_numpy(feature[test_unseen_loc]).float()
-				self.test_unseen_label = torch.from_numpy(label[test_unseen_loc]).long()
-				self.test_seen_feature = torch.from_numpy(feature[test_seen_loc]).float()
-				self.test_seen_label = torch.from_numpy(label[test_seen_loc]).long()
-		else:
-			self.train_feature = torch.from_numpy(feature[train_loc]).float()
-			self.train_label = torch.from_numpy(label[train_loc]).long()
-			self.test_unseen_feature = torch.from_numpy(feature[val_unseen_loc]).float()
-			self.test_unseen_label = torch.from_numpy(label[val_unseen_loc]).long()
-
-		self.seenclasses = torch.from_numpy(np.unique(self.train_label.numpy()))
-		self.unseenclasses = torch.from_numpy(np.unique(self.test_unseen_label.numpy()))
-		self.ntrain = self.train_feature.size()[0]
-		self.ntrain_class = self.seenclasses.size(0)
-		self.ntest_class = self.unseenclasses.size(0)
-		self.train_class = self.seenclasses.clone()
-		self.allclasses = torch.arange(0, self.ntrain_class + self.ntest_class).long()
-		self.attribute_seen = self.attribute[self.seenclasses]
-
-		# collect the data of each class
-
+		attribute = {}
+		for key, value in data.items():
+			attribute[key] = np.array(value)
+   
+		categories = list(attribute.keys())
+		embedding_list = [attribute[category] for category in categories]
+		self.attribute = torch.tensor(np.array(embedding_list), dtype=torch.float32)
+  
+		self.allclasses = [0, 1, 2]
+		self.seenclasses = [1, 2]
+		self.unseenclasses = [0]
+		self.attribute_seen = self.attribute[self.seenclasses, :]
+  
+		indices_seen = np.where((self.test_label == 1) | (self.test_label == 2))[0]
+		self.test_seen_features = self.test_features[indices_seen]
+		self.test_seen_labels = self.test_label[indices_seen]
+  
+		indices_unseen = np.where(self.test_label == 0)[0]
+		self.test_unseen_features = self.test_features[indices_unseen]
+		self.test_unseen_labels = self.test_label[indices_unseen]
+  
 		self.train_samples_class_index = torch.tensor([self.train_label.eq(i_class).sum().float() for i_class in self.train_class])
-		#
-		# import pdb
-		# pdb.set_trace()
-
-		# self.train_mapped_label = map_label(self.train_label, self.seenclasses)
+     
 
 	def next_batch_one_class(self, batch_size):
 		if self.index_in_epoch == self.ntrain_class:
