@@ -178,3 +178,29 @@ class DATA_LOADER(object):
 			batch_label[i] = self.train_label[idx_file]
 			batch_att[i] = self.attribute[batch_label[i]]
 		return batch_feature, batch_label, batch_att
+
+
+def save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, kind="seen"):
+    torch.save({
+        'epoch': epoch,
+        'netG_state_dict': netG.state_dict(),
+        'netD_state_dict': netD.state_dict(),
+        'netMap_state_dict': netMap.state_dict(),
+        'F_ha_state_dict': F_ha.state_dict(),
+        'optimizerG_state_dict': optimizerG.state_dict(),
+        'optimizerD_state_dict': optimizerD.state_dict(),
+        'opt': opt,
+    }, os.path.join(model_path, f'model_epoch_{epoch}_{kind}.pth'))
+    
+    
+def load_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, model_path, kind):
+    checkpoint = torch.load(os.path.join(model_path, f'model_epoch_{epoch}_{kind}.pth'))
+    netG.load_state_dict(checkpoint['netG_state_dict'])
+    netD.load_state_dict(checkpoint['netD_state_dict'])
+    netMap.load_state_dict(checkpoint['netMap_state_dict'])
+    F_ha.load_state_dict(checkpoint['F_ha_state_dict'])
+    optimizerG.load_state_dict(checkpoint['optimizerG_state_dict'])
+    optimizerD.load_state_dict(checkpoint['optimizerD_state_dict'])
+    epoch = checkpoint['epoch']
+    opt = checkpoint['opt']
+    return epoch, opt

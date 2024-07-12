@@ -87,7 +87,7 @@ netMap = model.Embedding_Net(opt)
 netD = model.MLP_CRITIC(opt)
 F_ha = model.Dis_Embed_Att(opt)
 
-model_path = './models/' + opt.dataset
+model_path = os.path.join('/home/LAB/chenlb24/compare_model/CE-GZSL/models', opt.dataset)
 if not os.path.exists(model_path):
     os.makedirs(model_path)
 
@@ -96,14 +96,15 @@ if len(opt.gpus.split(','))>1:
     netD = nn.DataParallel(netD)
     netMap = nn.DataParallel(netMap)
     F_ha = nn.DataParallel(F_ha)
-
-
+    
 contras_criterion = losses.SupConLoss_clear(opt.ins_temp)
 
 input_res = torch.FloatTensor(opt.batch_size, opt.resSize)
 input_att = torch.FloatTensor(opt.batch_size, opt.attSize)
 noise_gen = torch.FloatTensor(opt.batch_size, opt.nz)
 input_label = torch.LongTensor(opt.batch_size)
+
+
 
 if opt.cuda:
     netG.cuda()
@@ -203,6 +204,10 @@ def class_scores_in_matrix(embed, input_label, relation_net):
     cls_loss = -((mask * log_scores).sum(1) / mask.sum(1)).mean()
     return cls_loss
 
+
+epoch_to_load = 9  # 您想要加载的 epoch
+_, _ = util.load_models(epoch_to_load, netG, netD, netMap, F_ha, optimizerG, optimizerD, model_path, "H")
+print("预加载完成")
 
 best_seen = 0.
 best_unseen = 0.
