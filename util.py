@@ -258,8 +258,8 @@ def save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, mo
     }, os.path.join(model_path, f'model_epoch_{epoch}_{kind}.pth'))
     
     
-def load_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, model_path, kind):
-    checkpoint = torch.load(os.path.join(model_path, f'model_epoch_{epoch}_{kind}.pth'))
+def load_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, model_path):
+    checkpoint = torch.load(model_path)
     netG.load_state_dict(checkpoint['netG_state_dict'])
     netD.load_state_dict(checkpoint['netD_state_dict'])
     netMap.load_state_dict(checkpoint['netMap_state_dict'])

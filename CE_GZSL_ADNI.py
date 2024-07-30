@@ -87,7 +87,7 @@ netMap = model.Embedding_Net(opt)
 netD = model.MLP_CRITIC(opt)
 F_ha = model.Dis_Embed_Att(opt)
 
-model_path = './models/' + opt.dataset
+model_path = './models/test' + opt.dataset
 if not os.path.exists(model_path):
     os.makedirs(model_path)
 else:
@@ -208,9 +208,13 @@ def class_scores_in_matrix(embed, input_label, relation_net):
     return cls_loss
 
 
+epoch, opt = util.load_models(1640, netG, netD, netMap, F_ha, optimizerG, optimizerD, "/home/LAB/chenlb24/compare_model/CE-GZSL/models/ADNI/model_epoch_1640_H.pth")
+
+
 best_seen = 0.
 best_unseen = 0.
 best_h = 0.
+
 
 for epoch in range(opt.nepoch):
     FP = 0
@@ -319,8 +323,7 @@ for epoch in range(opt.nepoch):
 
         nclass = opt.nclass_all
         cls = classifier_embed_contras.CLASSIFIER(train_X, train_Y, netMap, opt.embedSize, data, nclass, opt.cuda,
-                                                  opt.classifier_lr, 0.5, 25, opt.syn_num,
-                                                  True)
+                                                  opt.classifier_lr, 0.5, 25, opt.syn_num,True,epoch)
         print('unseen=%.4f, seen=%.4f, h=%.4f' % (cls.acc_unseen, cls.acc_seen, cls.H))
 
     else:  # conventional zero-shot learning
@@ -338,13 +341,13 @@ for epoch in range(opt.nepoch):
     for p in netMap.parameters():  # reset requires_grad
         p.requires_grad = True
         
-    if cls.acc_seen > best_seen:
-        util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "seen")
-        best_seen = cls.acc_seen
+    # if cls.acc_seen > best_seen:
+    #     util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "seen")
+    #     best_seen = cls.acc_seen
         
-    if cls.acc_unseen > best_unseen:
-        util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "unseen")
-        best_unseen = cls.acc_unseen
+    # if cls.acc_unseen > best_unseen:
+    #     util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "unseen")
+    #     best_unseen = cls.acc_unseen
     
     if cls.H > best_h:
         util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "H")

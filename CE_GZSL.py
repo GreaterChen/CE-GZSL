@@ -87,7 +87,7 @@ netMap = model.Embedding_Net(opt)
 netD = model.MLP_CRITIC(opt)
 F_ha = model.Dis_Embed_Att(opt)
 
-model_path = './models/' + opt.dataset
+model_path = './models/test' + opt.dataset
 if not os.path.exists(model_path):
     os.makedirs(model_path)
 else:
@@ -118,8 +118,6 @@ if opt.cuda:
     noise_gen, input_att = noise_gen.cuda(), input_att.cuda()
     input_label = input_label.cuda()
 
-
-print("完成模型读取")
 
 def sample():
     batch_feature, batch_label, batch_att = data.next_batch(opt.batch_size)
@@ -207,6 +205,42 @@ def class_scores_in_matrix(embed, input_label, relation_net):
     cls_loss = -((mask * log_scores).sum(1) / mask.sum(1)).mean()
     return cls_loss
 
+
+def evaluate_model(netG, netMap, test_feature, test_label, batch_size=32):
+    netG.eval()
+    netMap.eval()
+
+    correct = 0
+    total = 0
+    all_preds = []
+    all_targets = []
+
+    with torch.no_grad():
+        for i in range(0, test_feature.size(0), batch_size):
+            inputs = test_feature[i:i + batch_size]
+            targets = test_label[i:i + batch_size]
+
+            if opt.cuda:
+                inputs = inputs.cuda()
+                targets = targets.cuda()
+
+            # 生成假样本
+            noise_gen = torch.randn(inputs.size(0), opt.nz).cuda()
+            fake = netG(noise_gen, inputs)
+            _, outputs = netMap(fake)
+
+            # 计算预测
+            _, predicted = torch.max(outputs.data, 1)
+            total += targets.size(0)
+            correct += (predicted == targets).sum().item()
+            all_preds.extend(predicted.cpu().numpy())
+            all_targets.extend(targets.cpu().numpy())
+
+    accuracy = correct / total
+    return accuracy, all_preds, all_targets
+
+
+epoch, opt = util.load_models(1640, netG, netD, netMap, F_ha, optimizerG, optimizerD, "/home/LAB/chenlb24/compare_model/CE-GZSL/models/ZDFY/model_epoch_841_H.pth")
 
 best_seen = 0.
 best_unseen = 0.
@@ -319,8 +353,7 @@ for epoch in range(opt.nepoch):
 
         nclass = opt.nclass_all
         cls = classifier_embed_contras.CLASSIFIER(train_X, train_Y, netMap, opt.embedSize, data, nclass, opt.cuda,
-                                                  opt.classifier_lr, 0.5, 25, opt.syn_num,
-                                                  True)
+                                                  opt.classifier_lr, 0.5, 25, opt.syn_num, True, epoch)
         print('unseen=%.4f, seen=%.4f, h=%.4f' % (cls.acc_unseen, cls.acc_seen, cls.H))
 
     else:  # conventional zero-shot learning
@@ -333,21 +366,22 @@ for epoch in range(opt.nepoch):
         acc = cls.acc
         print('unseen class accuracy=%.4f '%acc)
         
+        
     # reset G to training mode
     netG.train()
     for p in netMap.parameters():  # reset requires_grad
         p.requires_grad = True
         
-    if cls.acc_seen > best_seen:
-        util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "seen")
-        best_seen = cls.acc_seen
+    # if cls.acc_seen > best_seen:
+    #     util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "seen")
+    #     best_seen = cls.acc_seen
         
-    if cls.acc_unseen > best_unseen:
-        util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "unseen")
-        best_unseen = cls.acc_unseen
+    # if cls.acc_unseen > best_unseen:
+    #     util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "unseen")
+    #     best_unseen = cls.acc_unseen
     
-    if cls.H > best_h:
-        util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "H")
-        best_h = cls.H
+    # if cls.H > best_h:
+    #     util.save_models(epoch, netG, netD, netMap, F_ha, optimizerG, optimizerD, opt, model_path, "H")
+    #     best_h = cls.H
         
 
