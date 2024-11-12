@@ -91,7 +91,7 @@ class CLASSIFIER:
                 all_df = pd.concat([seen_df, unseen_df])
         
         if best_H > 0:
-            filename = f'/home/LAB/chenlb24/compare_model/CE-GZSL/models/testADNI/results_acc_{best_seen:.4f}_unseen_acc_{best_unseen:.4f}_h_{best_H:.4f}_epoch_{self.cur_epoch}.csv'
+            filename = f'/home/chenlb/compare_model/CE-GZSL/results/APTOS/results_h_{best_H:.4f}_seen_{best_seen:.4f}_unseen_acc_{best_unseen:.4f}_epoch_{self.cur_epoch}.csv'
             all_df.to_csv(filename, index=False)
 
         return best_seen, best_unseen, best_H
